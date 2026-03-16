@@ -2,15 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>March Madness 2026 Bracket Picker</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body, #root { height: 100%; width: 100%; overflow: hidden; }
-  body { font-family: 'Helvetica Neue', -apple-system, sans-serif; }
+  html { height: -webkit-fill-available; }
+  body { font-family: 'Helvetica Neue', -apple-system, sans-serif; min-height: 100dvh; min-height: -webkit-fill-available; }
   @media print { .noprint { display: none !important; } }
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .safe-bottom { padding-bottom: calc(12px + env(safe-area-inset-bottom)) !important; }
+  }
 </style>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -313,8 +317,33 @@ function App(){
   const roundLabel=game?(game.round===5?"Championship":game.round===4?"Final Four":ROUND_NAMES[game.round]):"";
   const regionLabel=game?(game.round>=4?(game.round===5?"Championship":"Final Four"):game.region+" Region"):"";
 
+  const advancingRef = useRef(false);
+
+  // Auto-jump: if current game has missing teams, find the earliest unresolved playable game
+  useEffect(()=>{
+    if(done) return;
+    const g=ALL_GAMES[cur];
+    if(!g) return;
+    const ts=getTeams(g,picks);
+    if(ts[0]&&ts[1]) return; // current game is playable, no jump needed
+
+    // Find earliest game that: has both teams available AND has no pick yet
+    for(let i=0;i<ALL_GAMES.length;i++){
+      const gi=ALL_GAMES[i];
+      const k=gKey(gi);
+      if(picks[k]) continue; // already picked
+      const tsi=getTeams(gi,picks);
+      if(tsi[0]&&tsi[1]){
+        setCur(i);
+        return;
+      }
+    }
+  },[cur,picks,done]);
+
   const handlePick=useCallback((team)=>{
-    if(!team||!key)return;
+    if(!team||!key||advancingRef.current)return;
+    advancingRef.current=true;
+
     setPicks(prev=>{
       const oldPick=prev[key];
       let next={...prev,[key]:team};
@@ -337,10 +366,15 @@ function App(){
       }
       return next;
     });
-    setTimeout(()=>{
-      if(cur<ALL_GAMES.length-1){setCur(c=>c+1);}
-      else{setDone(true);}
-    },350);
+
+    // Use requestAnimationFrame + short delay to ensure state is committed before advancing
+    requestAnimationFrame(()=>{
+      setTimeout(()=>{
+        if(cur<ALL_GAMES.length-1){setCur(c=>c+1);}
+        else{setDone(true);}
+        advancingRef.current=false;
+      },200);
+    });
   },[key,cur]);
 
   const canBack=cur>0;
@@ -353,7 +387,7 @@ function App(){
   if(!playerName){
     return(
       <div style={{
-        minHeight:"100vh",
+        minHeight:"100dvh",
         background:"linear-gradient(135deg, #1e1b4b 0%, #0f0f23 50%, #1a3a5c 100%)",
         display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
         fontFamily:"'Helvetica Neue',-apple-system,sans-serif",color:"white",padding:24,
@@ -394,7 +428,7 @@ function App(){
 
   return(
     <div style={{
-      minHeight:"100vh",
+      minHeight:"100dvh",height:"100dvh",
       background:`linear-gradient(135deg, ${rc.bg} 0%, #0f0f23 100%)`,
       fontFamily:"'Helvetica Neue',-apple-system,sans-serif",
       color:"white",display:"flex",flexDirection:"column",
@@ -461,17 +495,30 @@ function App(){
               </div>
             </div>
           ):(
-            <div style={{textAlign:"center",padding:24,opacity:0.5}}>
-              <div style={{fontSize:48,marginBottom:8}}>⏳</div>
-              <div style={{fontSize:15}}>Waiting for earlier picks...</div>
-              <div style={{fontSize:12,marginTop:6}}>Go back to fill in missing games</div>
+            <div style={{textAlign:"center",padding:24,opacity:0.7}}>
+              <div style={{fontSize:48,marginBottom:8}}>🔍</div>
+              <div style={{fontSize:15}}>Finding next game...</div>
+              <button onClick={()=>{
+                for(let i=0;i<ALL_GAMES.length;i++){
+                  const gi=ALL_GAMES[i];
+                  const k=gKey(gi);
+                  if(picks[k]) continue;
+                  const tsi=getTeams(gi,picks);
+                  if(tsi[0]&&tsi[1]){setCur(i);return;}
+                }
+              }} style={{
+                marginTop:12,padding:"10px 24px",borderRadius:20,border:"none",
+                background:"rgba(255,255,255,0.15)",color:"white",fontSize:14,fontWeight:700,cursor:"pointer",
+              }}>
+                Jump to Next Pick →
+              </button>
             </div>
           )}
         </div>
       )}
 
       {!done&&(
-        <div style={{padding:"10px 16px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+        <div className="safe-bottom" style={{padding:"10px 16px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <button onClick={()=>setCur(c=>Math.max(0,c-1))} disabled={!canBack}
             style={{
               padding:"12px 22px",borderRadius:24,border:"none",
