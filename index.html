@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>March Madness 2026 Bracket Picker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body, #root { height: 100%; width: 100%; overflow: hidden; }
+  body { font-family: 'Helvetica Neue', -apple-system, sans-serif; }
+  @media print { .noprint { display: none !important; } }
+</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useCallback, useRef, useEffect } = React;
+
+const TEAMS = {
+  duke:{name:"Duke",seed:1,espnId:150,region:"East"},
+  siena:{name:"Siena",seed:16,espnId:2561,region:"East"},
+  ohio_st:{name:"Ohio State",seed:8,espnId:194,region:"East"},
+  tcu:{name:"TCU",seed:9,espnId:2628,region:"East"},
+  st_johns:{name:"St. John's",seed:5,espnId:2599,region:"East"},
+  n_iowa:{name:"N. Iowa",seed:12,espnId:2460,region:"East"},
+  kansas:{name:"Kansas",seed:4,espnId:2305,region:"East"},
+  cal_baptist:{name:"Cal Baptist",seed:13,espnId:2856,region:"East"},
+  louisville:{name:"Louisville",seed:6,espnId:97,region:"East"},
+  s_florida:{name:"S. Florida",seed:11,espnId:58,region:"East"},
+  mich_st:{name:"Michigan St.",seed:3,espnId:127,region:"East"},
+  ndsu:{name:"N. Dakota St.",seed:14,espnId:2449,region:"East"},
+  ucla:{name:"UCLA",seed:7,espnId:26,region:"East"},
+  ucf:{name:"UCF",seed:10,espnId:2116,region:"East"},
+  uconn:{name:"UConn",seed:2,espnId:41,region:"East"},
+  furman:{name:"Furman",seed:15,espnId:231,region:"East"},
+
+  arizona:{name:"Arizona",seed:1,espnId:12,region:"West"},
+  liu:{name:"LIU",seed:16,espnId:288,region:"West"},
+  villanova:{name:"Villanova",seed:8,espnId:222,region:"West"},
+  utah_st:{name:"Utah State",seed:9,espnId:328,region:"West"},
+  wisconsin:{name:"Wisconsin",seed:5,espnId:275,region:"West"},
+  high_point:{name:"High Point",seed:12,espnId:2272,region:"West"},
+  arkansas:{name:"Arkansas",seed:4,espnId:8,region:"West"},
+  hawaii:{name:"Hawai'i",seed:13,espnId:62,region:"West"},
+  byu:{name:"BYU",seed:6,espnId:252,region:"West"},
+  nc_state:{name:"NC State",seed:11,espnId:152,region:"West"},
+  gonzaga:{name:"Gonzaga",seed:3,espnId:2250,region:"West"},
+  kennesaw:{name:"Kennesaw St.",seed:14,espnId:2314,region:"West"},
+  miami_fl:{name:"Miami (FL)",seed:7,espnId:2390,region:"West"},
+  missouri:{name:"Missouri",seed:10,espnId:142,region:"West"},
+  purdue:{name:"Purdue",seed:2,espnId:2509,region:"West"},
+  queens:{name:"Queens",seed:15,espnId:3101,region:"West"},
+
+  michigan:{name:"Michigan",seed:1,espnId:130,region:"Midwest"},
+  umbc:{name:"UMBC",seed:16,espnId:2378,region:"Midwest"},
+  georgia:{name:"Georgia",seed:8,espnId:61,region:"Midwest"},
+  saint_louis:{name:"Saint Louis",seed:9,espnId:139,region:"Midwest"},
+  texas_tech:{name:"Texas Tech",seed:5,espnId:2641,region:"Midwest"},
+  akron:{name:"Akron",seed:12,espnId:2006,region:"Midwest"},
+  alabama:{name:"Alabama",seed:4,espnId:333,region:"Midwest"},
+  hofstra:{name:"Hofstra",seed:13,espnId:2275,region:"Midwest"},
+  tennessee:{name:"Tennessee",seed:6,espnId:2633,region:"Midwest"},
+  smu:{name:"SMU",seed:11,espnId:2567,region:"Midwest"},
+  virginia:{name:"Virginia",seed:3,espnId:258,region:"Midwest"},
+  wright_st:{name:"Wright State",seed:14,espnId:2750,region:"Midwest"},
+  kentucky:{name:"Kentucky",seed:7,espnId:96,region:"Midwest"},
+  santa_clara:{name:"Santa Clara",seed:10,espnId:2541,region:"Midwest"},
+  iowa_st:{name:"Iowa State",seed:2,espnId:66,region:"Midwest"},
+  tenn_st:{name:"Tenn. State",seed:15,espnId:2634,region:"Midwest"},
+
+  florida:{name:"Florida",seed:1,espnId:57,region:"South"},
+  lehigh:{name:"Lehigh",seed:16,espnId:2329,region:"South"},
+  clemson:{name:"Clemson",seed:8,espnId:228,region:"South"},
+  iowa:{name:"Iowa",seed:9,espnId:2294,region:"South"},
+  vanderbilt:{name:"Vanderbilt",seed:5,espnId:238,region:"South"},
+  mcneese:{name:"McNeese",seed:12,espnId:2377,region:"South"},
+  nebraska:{name:"Nebraska",seed:4,espnId:158,region:"South"},
+  troy:{name:"Troy",seed:13,espnId:2653,region:"South"},
+  unc:{name:"N. Carolina",seed:6,espnId:153,region:"South"},
+  vcu:{name:"VCU",seed:11,espnId:2670,region:"South"},
+  illinois:{name:"Illinois",seed:3,espnId:356,region:"South"},
+  penn:{name:"Penn",seed:14,espnId:219,region:"South"},
+  st_marys:{name:"Saint Mary's",seed:7,espnId:2608,region:"South"},
+  texas_am:{name:"Texas A&M",seed:10,espnId:245,region:"South"},
+  houston:{name:"Houston",seed:2,espnId:248,region:"South"},
+  idaho:{name:"Idaho",seed:15,espnId:70,region:"South"},
+};
+
+const BRACKET = {
+  East:[["duke","siena"],["ohio_st","tcu"],["st_johns","n_iowa"],["kansas","cal_baptist"],["louisville","s_florida"],["mich_st","ndsu"],["ucla","ucf"],["uconn","furman"]],
+  West:[["arizona","liu"],["villanova","utah_st"],["wisconsin","high_point"],["arkansas","hawaii"],["byu","nc_state"],["gonzaga","kennesaw"],["miami_fl","missouri"],["purdue","queens"]],
+  Midwest:[["michigan","umbc"],["georgia","saint_louis"],["texas_tech","akron"],["alabama","hofstra"],["tennessee","smu"],["virginia","wright_st"],["kentucky","santa_clara"],["iowa_st","tenn_st"]],
+  South:[["florida","lehigh"],["clemson","iowa"],["vanderbilt","mcneese"],["nebraska","troy"],["unc","vcu"],["illinois","penn"],["st_marys","texas_am"],["houston","idaho"]],
+};
+
+const REGION_COLORS = {
+  East:{bg:"#1a3a5c",accent:"#3b82f6",light:"#dbeafe",dark:"#1e40af"},
+  West:{bg:"#5c1a1a",accent:"#ef4444",light:"#fee2e2",dark:"#b91c1c"},
+  Midwest:{bg:"#1a5c2e",accent:"#22c55e",light:"#dcfce7",dark:"#15803d"},
+  South:{bg:"#5c4a1a",accent:"#f59e0b",light:"#fef3c7",dark:"#b45309"},
+  FF:{bg:"#1e1b4b",accent:"#a78bfa",light:"#ede9fe",dark:"#6d28d9"},
+};
+
+const ROUND_NAMES=["Round of 64","Round of 32","Sweet 16","Elite 8","Final Four","Championship"];
+const REGIONS=["East","West","Midwest","South"];
+
+function buildGames(){
+  const g=[];
+  for(const r of REGIONS) for(let i=0;i<8;i++) g.push({region:r,round:0,idx:i});
+  for(const r of REGIONS) for(let i=0;i<4;i++) g.push({region:r,round:1,idx:i});
+  for(const r of REGIONS) for(let i=0;i<2;i++) g.push({region:r,round:2,idx:i});
+  for(const r of REGIONS) g.push({region:r,round:3,idx:0});
+  g.push({region:"FF",round:4,idx:0});
+  g.push({region:"FF",round:4,idx:1});
+  g.push({region:"FF",round:5,idx:0});
+  return g;
+}
+
+const ALL_GAMES=buildGames();
+
+function gKey(g){ return `${g.region}-${g.round}-${g.idx}`; }
+
+function getTeams(g,picks){
+  const{region,round,idx}=g;
+  if(round===0) return BRACKET[region][idx];
+  if(round<=3){
+    return [picks[`${region}-${round-1}-${idx*2}`]||null, picks[`${region}-${round-1}-${idx*2+1}`]||null];
+  }
+  if(round===4){
+    if(idx===0) return [picks["East-3-0"]||null, picks["South-3-0"]||null];
+    return [picks["West-3-0"]||null, picks["Midwest-3-0"]||null];
+  }
+  if(round===5) return [picks["FF-4-0"]||null, picks["FF-4-1"]||null];
+  return [null,null];
+}
+
+function LogoImg({team,size,onClick,selected}){
+  const sz = size || 100;
+  const[err,setErr]=useState(false);
+  const t=TEAMS[team];
+  if(!t)return null;
+  return(
+    <div onClick={onClick} style={{
+      display:"flex",flexDirection:"column",alignItems:"center",gap:6,
+      cursor:onClick?"pointer":"default",
+      transform:selected?"scale(1.06)":"scale(1)",
+      transition:"all 0.2s ease",
+      padding:10,borderRadius:18,
+      background:selected?"rgba(255,255,255,0.18)":"rgba(255,255,255,0.04)",
+      border:selected?"3px solid #facc15":"3px solid transparent",
+      WebkitTapHighlightColor:"transparent",userSelect:"none",
+      minWidth:sz+20,
+    }}>
+      {!err?(
+        <img src={`https://a.espncdn.com/i/teamlogos/ncaa/500/${t.espnId}.png`} alt={t.name}
+          style={{width:sz,height:sz,objectFit:"contain",pointerEvents:"none",borderRadius:10,background:"white",padding:5}}
+          onError={()=>setErr(true)} draggable={false}/>
+      ):(
+        <div style={{
+          width:sz,height:sz,borderRadius:10,background:"white",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          fontSize:sz*0.22,fontWeight:800,color:"#333",textAlign:"center",lineHeight:1.1,padding:4,
+        }}>{t.name}</div>
+      )}
+      <div style={{fontSize:14,fontWeight:700,textAlign:"center",color:"white",textShadow:"0 1px 3px rgba(0,0,0,0.5)"}}>
+        <span style={{opacity:0.6,fontSize:11,marginRight:2}}>({t.seed})</span>
+        {t.name}
+      </div>
+    </div>
+  );
+}
+
+function PrintView({picks,playerName,onClose}){
+  function getMatchupPair(region,round,idx){
+    const g={region,round,idx};
+    return getTeams(g,picks);
+  }
+  function winner(region,round,idx){return picks[`${region}-${round}-${idx}`]||null;}
+
+  function RegionBlock({region}){
+    const c=REGION_COLORS[region];
+    return(
+      <div style={{pageBreakInside:"avoid",marginBottom:16}}>
+        <div style={{background:c.bg,color:"white",padding:"3px 10px",borderRadius:4,fontSize:13,fontWeight:800,display:"inline-block",marginBottom:6}}>{region}</div>
+        <div style={{display:"flex",gap:3}}>
+          {[0,1,2,3].map(round=>{
+            const count=round===0?8:round===1?4:round===2?2:1;
+            return(
+              <div key={round} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"space-around",minWidth:0}}>
+                <div style={{fontSize:8,fontWeight:700,color:"#888",textAlign:"center",marginBottom:3}}>{ROUND_NAMES[round]}</div>
+                {Array.from({length:count}).map((_,i)=>{
+                  const pair=getMatchupPair(region,round,i);
+                  const w=winner(region,round,i);
+                  return(
+                    <div key={i} style={{border:"1px solid #ccc",borderRadius:3,margin:"1px 0",overflow:"hidden"}}>
+                      {pair.map((tk,ti)=>{
+                        const t=tk?TEAMS[tk]:null;
+                        const won=w===tk&&tk;
+                        return(
+                          <div key={ti} style={{
+                            padding:"1px 4px",fontSize:9,display:"flex",justifyContent:"space-between",
+                            borderBottom:ti===0?"1px solid #eee":"none",
+                            background:won?c.light:"white",fontWeight:won?700:400,
+                          }}>
+                            <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t?t.name:"TBD"}</span>
+                            <span style={{color:"#aaa",flexShrink:0,marginLeft:2}}>{t?t.seed:""}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const ff0=picks["FF-4-0"], ff1=picks["FF-4-1"], champ=picks["FF-5-0"];
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"white",zIndex:9999,overflow:"auto",padding:16,color:"#111"}}>
+      <div className="noprint" style={{display:"flex",gap:10,marginBottom:12}}>
+        <button onClick={onClose} style={{padding:"8px 18px",borderRadius:8,border:"2px solid #333",background:"white",fontWeight:700,cursor:"pointer",fontSize:13}}>← Back</button>
+        <button onClick={()=>window.print()} style={{padding:"8px 18px",borderRadius:8,border:"none",background:"#2563eb",color:"white",fontWeight:700,cursor:"pointer",fontSize:13}}>🖨️ Print Bracket</button>
+      </div>
+      <div style={{maxWidth:850,margin:"0 auto"}}>
+        <h1 style={{textAlign:"center",fontSize:20,margin:"0 0 2px",fontWeight:900}}>🏀 {playerName}'s 2026 NCAA Tournament Bracket</h1>
+        <p style={{textAlign:"center",fontSize:11,color:"#888",margin:"0 0 12px"}}>March Madness Picks</p>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          {REGIONS.map(r=><RegionBlock key={r} region={r}/>)}
+        </div>
+        <div style={{textAlign:"center",margin:"12px 0",padding:12,border:"3px solid #1e1b4b",borderRadius:10}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#888",marginBottom:6,textTransform:"uppercase",letterSpacing:1}}>Final Four & Championship</div>
+          <div style={{display:"flex",justifyContent:"center",gap:32,marginBottom:8}}>
+            <div><div style={{fontSize:9,color:"#aaa"}}>East vs South</div><div style={{fontWeight:700,fontSize:13}}>{ff0?TEAMS[ff0].name:"TBD"}</div></div>
+            <div><div style={{fontSize:9,color:"#aaa"}}>West vs Midwest</div><div style={{fontWeight:700,fontSize:13}}>{ff1?TEAMS[ff1].name:"TBD"}</div></div>
+          </div>
+          <div style={{fontSize:18,fontWeight:900}}>🏆 {champ?TEAMS[champ].name:"TBD"}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const[picks,setPicks]=useState({});
+  const[cur,setCur]=useState(0);
+  const[done,setDone]=useState(false);
+  const[showPrint,setShowPrint]=useState(false);
+  const[nameInput,setNameInput]=useState("");
+  const[playerName,setPlayerName]=useState("");
+
+  const game=ALL_GAMES[cur];
+  const key=game?gKey(game):null;
+  const teams=game?getTeams(game,picks):[null,null];
+  const currentPick=key?picks[key]:null;
+
+  const rc=game?(game.region==="FF"||game.round===5?REGION_COLORS.FF:REGION_COLORS[game.region]):REGION_COLORS.FF;
+
+  const roundLabel=game?(game.round===5?"Championship":game.round===4?"Final Four":ROUND_NAMES[game.round]):"";
+  const regionLabel=game?(game.round>=4?(game.round===5?"Championship":"Final Four"):game.region+" Region"):"";
+
+  const handlePick=useCallback((team)=>{
+    if(!team||!key)return;
+    setPicks(prev=>{
+      const oldPick=prev[key];
+      let next={...prev,[key]:team};
+      if(oldPick&&oldPick!==team){
+        const keysToCheck=Object.keys(next).filter(k=>k!==key);
+        let changed=true;
+        while(changed){
+          changed=false;
+          for(const k of keysToCheck){
+            if(!next[k])continue;
+            const g=ALL_GAMES.find(g2=>gKey(g2)===k);
+            if(!g)continue;
+            const ts=getTeams(g,next);
+            if(!ts.includes(next[k])){
+              delete next[k];
+              changed=true;
+            }
+          }
+        }
+      }
+      return next;
+    });
+    setTimeout(()=>{
+      if(cur<ALL_GAMES.length-1){setCur(c=>c+1);}
+      else{setDone(true);}
+    },350);
+  },[key,cur]);
+
+  const canBack=cur>0;
+  const canFwd=cur<ALL_GAMES.length-1&&currentPick;
+  const progress=((cur)/(ALL_GAMES.length))*100;
+  const totalPicked=Object.keys(picks).length;
+
+  if(showPrint) return <PrintView picks={picks} playerName={playerName} onClose={()=>setShowPrint(false)}/>;
+
+  if(!playerName){
+    return(
+      <div style={{
+        minHeight:"100vh",
+        background:"linear-gradient(135deg, #1e1b4b 0%, #0f0f23 50%, #1a3a5c 100%)",
+        display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+        fontFamily:"'Helvetica Neue',-apple-system,sans-serif",color:"white",padding:24,
+      }}>
+        <div style={{fontSize:80,marginBottom:16}}>🏀</div>
+        <h1 style={{fontSize:32,fontWeight:900,marginBottom:4,textAlign:"center",letterSpacing:-1}}>March Madness 2026</h1>
+        <p style={{fontSize:16,opacity:0.6,marginBottom:32,textAlign:"center"}}>Bracket Picker</p>
+        <div style={{width:"100%",maxWidth:320}}>
+          <input
+            type="text"
+            placeholder="Enter your name..."
+            value={nameInput}
+            onChange={e=>setNameInput(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter"&&nameInput.trim())setPlayerName(nameInput.trim())}}
+            style={{
+              width:"100%",padding:"16px 20px",borderRadius:16,border:"2px solid rgba(255,255,255,0.2)",
+              background:"rgba(255,255,255,0.08)",color:"white",fontSize:18,textAlign:"center",
+              outline:"none",boxSizing:"border-box",
+            }}
+            autoFocus
+          />
+          <button
+            onClick={()=>{if(nameInput.trim())setPlayerName(nameInput.trim())}}
+            disabled={!nameInput.trim()}
+            style={{
+              width:"100%",marginTop:12,padding:"16px",borderRadius:16,border:"none",
+              background:nameInput.trim()?"linear-gradient(135deg,#facc15,#f59e0b)":"rgba(255,255,255,0.1)",
+              color:nameInput.trim()?"#1e1b4b":"rgba(255,255,255,0.3)",
+              fontSize:18,fontWeight:800,cursor:nameInput.trim()?"pointer":"default",
+            }}
+          >
+            Let's Go! →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return(
+    <div style={{
+      minHeight:"100vh",
+      background:`linear-gradient(135deg, ${rc.bg} 0%, #0f0f23 100%)`,
+      fontFamily:"'Helvetica Neue',-apple-system,sans-serif",
+      color:"white",display:"flex",flexDirection:"column",
+      overflow:"hidden",transition:"background 0.6s ease",
+    }}>
+      <div style={{padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(255,255,255,0.08)",flexShrink:0}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:800,letterSpacing:-0.5}}>🏀 {playerName}'s Bracket</div>
+          <div style={{fontSize:10,opacity:0.5,marginTop:1}}>Tap a logo to pick the winner</div>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          {totalPicked===ALL_GAMES.length&&(
+            <button onClick={()=>setShowPrint(true)} style={{padding:"6px 14px",borderRadius:16,border:"none",background:"#facc15",color:"#1e1b4b",fontWeight:800,fontSize:12,cursor:"pointer"}}>
+              🖨️ Print
+            </button>
+          )}
+          <button onClick={()=>{setPicks({});setCur(0);setDone(false)}} style={{padding:"6px 12px",borderRadius:16,border:"1px solid rgba(255,255,255,0.2)",background:"transparent",color:"white",fontSize:11,cursor:"pointer"}}>
+            Reset
+          </button>
+        </div>
+      </div>
+
+      <div style={{height:4,background:"rgba(255,255,255,0.08)",flexShrink:0}}>
+        <div style={{height:"100%",background:`linear-gradient(90deg,${rc.accent},#facc15)`,width:`${progress}%`,transition:"width 0.4s ease",borderRadius:"0 2px 2px 0"}}/>
+      </div>
+
+      <div style={{textAlign:"center",padding:"14px 14px 6px",flexShrink:0}}>
+        <div style={{display:"inline-block",padding:"3px 14px",borderRadius:16,background:rc.accent,fontSize:11,fontWeight:700,letterSpacing:0.5,textTransform:"uppercase"}}>
+          {regionLabel}
+        </div>
+        <div style={{fontSize:24,fontWeight:900,marginTop:6,letterSpacing:-0.5}}>{roundLabel}</div>
+        <div style={{fontSize:11,opacity:0.4,marginTop:2}}>Game {cur+1} of {ALL_GAMES.length} • {totalPicked} picks made</div>
+      </div>
+
+      {done?(
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div style={{fontSize:80,marginBottom:12}}>🏆</div>
+          <div style={{fontSize:28,fontWeight:900,marginBottom:4,textAlign:"center"}}>
+            {picks["FF-5-0"]?TEAMS[picks["FF-5-0"]].name:"Champion"}!
+          </div>
+          <div style={{fontSize:14,opacity:0.6,marginBottom:24,textAlign:"center"}}>{playerName}'s bracket is complete!</div>
+          <button onClick={()=>setShowPrint(true)} style={{
+            padding:"16px 40px",borderRadius:24,border:"none",
+            background:"linear-gradient(135deg,#facc15,#f59e0b)",color:"#1e1b4b",
+            fontWeight:800,fontSize:18,cursor:"pointer",boxShadow:"0 8px 32px rgba(250,204,21,0.3)",
+          }}>
+            🖨️ Print Your Bracket
+          </button>
+          <button onClick={()=>{setCur(ALL_GAMES.length-1);setDone(false)}} style={{
+            marginTop:10,padding:"10px 20px",borderRadius:16,border:"1px solid rgba(255,255,255,0.2)",
+            background:"transparent",color:"white",fontSize:12,cursor:"pointer",
+          }}>← Go Back & Edit</button>
+        </div>
+      ):(
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"12px 12px 4px",gap:12}}>
+          {teams[0]&&teams[1]?(
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16,width:"100%",maxWidth:460}}>
+              <div style={{flex:1,display:"flex",justifyContent:"center"}}>
+                <LogoImg team={teams[0]} size={120} onClick={()=>handlePick(teams[0])} selected={currentPick===teams[0]}/>
+              </div>
+              <div style={{fontSize:30,fontWeight:900,opacity:0.2,flexShrink:0}}>VS</div>
+              <div style={{flex:1,display:"flex",justifyContent:"center"}}>
+                <LogoImg team={teams[1]} size={120} onClick={()=>handlePick(teams[1])} selected={currentPick===teams[1]}/>
+              </div>
+            </div>
+          ):(
+            <div style={{textAlign:"center",padding:24,opacity:0.5}}>
+              <div style={{fontSize:48,marginBottom:8}}>⏳</div>
+              <div style={{fontSize:15}}>Waiting for earlier picks...</div>
+              <div style={{fontSize:12,marginTop:6}}>Go back to fill in missing games</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!done&&(
+        <div style={{padding:"10px 16px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+          <button onClick={()=>setCur(c=>Math.max(0,c-1))} disabled={!canBack}
+            style={{
+              padding:"12px 22px",borderRadius:24,border:"none",
+              background:canBack?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)",
+              color:canBack?"white":"rgba(255,255,255,0.15)",fontSize:15,fontWeight:700,
+              cursor:canBack?"pointer":"default",WebkitTapHighlightColor:"transparent",
+            }}>
+            ← Back
+          </button>
+          <div style={{display:"flex",gap:3}}>
+            {REGIONS.map(r=>(
+              <div key={r} style={{width:7,height:7,borderRadius:4,
+                background:game&&game.region===r?rc.accent:
+                game&&(game.region==="FF"||game.round===5)?"#a78bfa":"rgba(255,255,255,0.15)",
+              }}/>
+            ))}
+          </div>
+          <button onClick={()=>{if(canFwd)setCur(c=>c+1)}} disabled={!canFwd}
+            style={{
+              padding:"12px 22px",borderRadius:24,border:"none",
+              background:canFwd?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.04)",
+              color:canFwd?"white":"rgba(255,255,255,0.15)",fontSize:15,fontWeight:700,
+              cursor:canFwd?"pointer":"default",WebkitTapHighlightColor:"transparent",
+            }}>
+            Skip →
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
