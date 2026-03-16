@@ -280,7 +280,7 @@ function PrintView({picks,playerName,onClose}){
         <h1 style={{textAlign:"center",fontSize:20,margin:"0 0 2px",fontWeight:900}}>🏀 {playerName}'s 2026 NCAA Tournament Bracket</h1>
         <p style={{textAlign:"center",fontSize:11,color:"#888",margin:"0 0 12px"}}>March Madness Picks</p>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          {REGIONS.map(r=><RegionBlock key={r} region={r}/>)}
+          {["East","West","South","Midwest"].map(r=><RegionBlock key={r} region={r}/>)}
         </div>
         <div style={{textAlign:"center",margin:"12px 0",padding:12,border:"3px solid #1e1b4b",borderRadius:10}}>
           <div style={{fontSize:10,fontWeight:700,color:"#888",marginBottom:6,textTransform:"uppercase",letterSpacing:1}}>Final Four & Championship</div>
