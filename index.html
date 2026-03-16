@@ -40,7 +40,7 @@ const TEAMS = {
   furman:{name:"Furman",seed:15,espnId:231,region:"East"},
 
   arizona:{name:"Arizona",seed:1,espnId:12,region:"West"},
-  liu:{name:"LIU",seed:16,espnId:288,region:"West"},
+  liu:{name:"LIU",seed:16,espnId:112358,region:"West"},
   villanova:{name:"Villanova",seed:8,espnId:222,region:"West"},
   utah_st:{name:"Utah State",seed:9,espnId:328,region:"West"},
   wisconsin:{name:"Wisconsin",seed:5,espnId:275,region:"West"},
@@ -50,11 +50,11 @@ const TEAMS = {
   byu:{name:"BYU",seed:6,espnId:252,region:"West"},
   nc_state:{name:"NC State",seed:11,espnId:152,region:"West"},
   gonzaga:{name:"Gonzaga",seed:3,espnId:2250,region:"West"},
-  kennesaw:{name:"Kennesaw St.",seed:14,espnId:2314,region:"West"},
+  kennesaw:{name:"Kennesaw St.",seed:14,espnId:338,region:"West"},
   miami_fl:{name:"Miami (FL)",seed:7,espnId:2390,region:"West"},
   missouri:{name:"Missouri",seed:10,espnId:142,region:"West"},
   purdue:{name:"Purdue",seed:2,espnId:2509,region:"West"},
-  queens:{name:"Queens",seed:15,espnId:3101,region:"West"},
+  queens:{name:"Queens",seed:15,espnId:2511,region:"West"},
 
   michigan:{name:"Michigan",seed:1,espnId:130,region:"Midwest"},
   umbc:{name:"UMBC",seed:16,espnId:2378,region:"Midwest"},
@@ -139,11 +139,54 @@ function getTeams(g,picks){
   return [null,null];
 }
 
+// Color hash for fallback badges
+const TEAM_BADGE_COLORS = {
+  duke:"#003087",siena:"#006747",ohio_st:"#BB0000",tcu:"#4D1979",st_johns:"#C8102E",n_iowa:"#4B116F",
+  kansas:"#0051BA",cal_baptist:"#002855",louisville:"#AD0000",s_florida:"#006747",mich_st:"#18453B",
+  ndsu:"#006A3D",ucla:"#2774AE",ucf:"#BA9B37",uconn:"#000E2F",furman:"#582C83",arizona:"#CC0033",
+  liu:"#00529B",villanova:"#003366",utah_st:"#0F2439",wisconsin:"#C5050C",high_point:"#330072",
+  arkansas:"#9D2235",hawaii:"#024731",byu:"#002E5D",nc_state:"#CC0000",gonzaga:"#002967",
+  kennesaw:"#FDBB30",miami_fl:"#F47321",missouri:"#F1B82D",purdue:"#CEB888",queens:"#002D6C",
+  michigan:"#00274C",umbc:"#F7B538",georgia:"#BA0C2F",saint_louis:"#003DA5",texas_tech:"#CC0000",
+  akron:"#041E42",alabama:"#9E1B32",hofstra:"#00529B",tennessee:"#FF8200",smu:"#C8102E",
+  virginia:"#232D4B",wright_st:"#007A33",kentucky:"#0033A0",santa_clara:"#862633",iowa_st:"#C8102E",
+  tenn_st:"#00539F",florida:"#0021A5",lehigh:"#653600",clemson:"#F56600",iowa:"#FFCD00",
+  vanderbilt:"#866D4B",mcneese:"#005DAA",nebraska:"#E41C38",troy:"#8B2332",unc:"#7BAFD4",
+  vcu:"#F8B800",illinois:"#E84A27",penn:"#011F5B",st_marys:"#D32032",texas_am:"#500000",
+  houston:"#C8102E",idaho:"#B5985A",
+};
+
 function LogoImg({team,size,onClick,selected}){
   const sz = size || 100;
-  const[err,setErr]=useState(false);
+  const retryRef = useRef(0);
+  const[imgSrc,setImgSrc]=useState(null);
+  const[failed,setFailed]=useState(false);
   const t=TEAMS[team];
+
+  useEffect(()=>{
+    retryRef.current=0;
+    setFailed(false);
+    if(t) setImgSrc(`https://a.espncdn.com/i/teamlogos/ncaa/500/${t.espnId}.png`);
+  },[team]);
+
   if(!t)return null;
+
+  const handleError=()=>{
+    retryRef.current++;
+    if(retryRef.current===1){
+      // Retry with combiner URL (more reliable for some teams)
+      setImgSrc(`https://a.espncdn.com/combiner/i?img=/i/teamlogos/ncaa/500/${t.espnId}.png&h=200&w=200`);
+    } else if(retryRef.current===2){
+      // Retry with dark variant
+      setImgSrc(`https://a.espncdn.com/i/teamlogos/ncaa/500-dark/${t.espnId}.png`);
+    } else {
+      setFailed(true);
+    }
+  };
+
+  const badgeColor = TEAM_BADGE_COLORS[team] || "#555";
+  const initials = t.name.replace(/[^A-Z]/g,'').slice(0,3) || t.name.slice(0,3).toUpperCase();
+
   return(
     <div onClick={onClick} style={{
       display:"flex",flexDirection:"column",alignItems:"center",gap:6,
@@ -156,16 +199,18 @@ function LogoImg({team,size,onClick,selected}){
       WebkitTapHighlightColor:"transparent",userSelect:"none",
       minWidth:sz+20,
     }}>
-      {!err?(
-        <img src={`https://a.espncdn.com/i/teamlogos/ncaa/500/${t.espnId}.png`} alt={t.name}
+      {!failed?(
+        <img src={imgSrc} alt={t.name}
           style={{width:sz,height:sz,objectFit:"contain",pointerEvents:"none",borderRadius:10,background:"white",padding:5}}
-          onError={()=>setErr(true)} draggable={false}/>
+          onError={handleError} draggable={false}/>
       ):(
         <div style={{
-          width:sz,height:sz,borderRadius:10,background:"white",
+          width:sz,height:sz,borderRadius:10,background:badgeColor,
           display:"flex",alignItems:"center",justifyContent:"center",
-          fontSize:sz*0.22,fontWeight:800,color:"#333",textAlign:"center",lineHeight:1.1,padding:4,
-        }}>{t.name}</div>
+          fontSize:sz*0.28,fontWeight:900,color:"white",textAlign:"center",
+          lineHeight:1.1,padding:4,textShadow:"0 1px 3px rgba(0,0,0,0.4)",
+          border:"3px solid rgba(255,255,255,0.3)",
+        }}>{initials}</div>
       )}
       <div style={{fontSize:14,fontWeight:700,textAlign:"center",color:"white",textShadow:"0 1px 3px rgba(0,0,0,0.5)"}}>
         <span style={{opacity:0.6,fontSize:11,marginRight:2}}>({t.seed})</span>
